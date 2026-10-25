@@ -121,7 +121,7 @@ public class Main {
         double viewportHeight = 2.0;
         double viewportWidth = aspectRatio * viewportHeight;
         double focalLength = 1.0;
-        double moveSpeed = 0.005;
+        double moveSpeed = 0.01;
 
         Vector3 horizontal = new Vector3(viewportWidth, 0, 0);
         Vector3 vertical = new Vector3(0, viewportHeight, 0);
@@ -138,35 +138,26 @@ public class Main {
         
         // Preallocating the objects
         HittableList world = new HittableList();
+        Material blackHoleMat = new GravityWell(new Vector3(0, 0, -4.0), 0.6, 0.4, 2.0, 0.02);
+        Material normalMat = new Lambertian(new Vector3(0.8, 0.3, 0.3));
 
-        Material groundMat = new Lambertian(new Vector3(0.8, 0.8, 0.0));
-        Material centerMat = new Lambertian(new Vector3(0.7, 0.3, 0.3));
-        // Fuzz is 0.3 in this one for a brushed look
-        Material glassMat = new Dielectric(1.5);
-        // Fuzz is 0 in this one for smooth metal look
-        Material rightMat = new Metal(new Vector3(0.8, 0.6, 0.2), 0.0);
-
-        world.Add(new Sphere(new Vector3(0, 0, -1), 0.5, centerMat));
-        world.Add(new Sphere(new Vector3(0, -100.5, -1), 100, groundMat)); // Very big sphere that acts as the ground basically
-        // Hollow Sphere
-        world.Add(new Sphere(new Vector3(-1, 0, -1), 0.5, glassMat));
-        world.Add(new Sphere(new Vector3(-1, 0, -1), -0.4, glassMat));
-        
-        world.Add(new Sphere(new Vector3(1, 0, -1), 0.5, rightMat));
+        Sphere interactiveSphere = new Sphere(new Vector3(0, 0, -7.0), 0.5, normalMat);
+        world.Add(interactiveSphere);
+        world.Add(new Sphere(new Vector3(0, 0, -4.0), 2.0, blackHoleMat));
+        // Now the floor object
+        Material floorMat = new Lambertian(new Vector3(0.5, 0.5, 0.5));
+        world.Add(new Sphere(new Vector3(0, -100.5, -1.0), 100, floorMat));
 
         // Multithreading stuff
         int cores = Runtime.getRuntime().availableProcessors();
         ExecutorService pool = Executors.newFixedThreadPool(cores);
-
         int gridDivisions = 16;
-
         int tileWidth = (int)Math.ceil((double) imageWidth / gridDivisions);
         int tileHeight = (int) Math.ceil((double) imageHeight / gridDivisions);
 
         // Main rendering loop
         System.out.println("[Started Rendering]");
         System.out.println("[Cores in Use: " + cores + "]");
-
         while(true){
             boolean cameraMoved = false;
             if(window.movingForward) { cameraOrigin.z -= moveSpeed; cameraMoved = true;}
@@ -180,7 +171,12 @@ public class Main {
                 lowerLeftCorner.z = cameraOrigin.z - horizontal.z / 2 - vertical.z / 2 - focalLength;
             }
 
-            int currentSamples = window.isMoving ? 1 : 50;
+            // This can be adapted to work for all the spheres in the scene
+            interactiveSphere.center.x = window.targetX * 3.0;
+            interactiveSphere.center.y = window.targetY * 3.0;
+            interactiveSphere.center.z = window.targetZ - 6.0;
+
+            int currentSamples = (window.isMoving || window.isGuiMoving) ? 1 : 50;
             for (int y = 0; y < imageHeight; y += tileHeight) {
                 for (int x = 0; x < imageWidth; x += tileWidth) {
                     
