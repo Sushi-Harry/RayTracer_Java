@@ -155,23 +155,48 @@ public class Main {
         int tileWidth = (int)Math.ceil((double) imageWidth / gridDivisions);
         int tileHeight = (int) Math.ceil((double) imageHeight / gridDivisions);
 
+        // Other camera variables
+        Vector3 forward = new Vector3();
+        Vector3 right = new Vector3();
+        Vector3 up = new Vector3();
+        Vector3 worldUp = new Vector3(0, 1.0, 0.0);
+        Vector3 tempVec = new Vector3();
+
         // Main rendering loop
         System.out.println("[Started Rendering]");
         System.out.println("[Cores in Use: " + cores + "]");
         while(true){
             boolean cameraMoved = false;
-            if(window.movingForward) { cameraOrigin.z -= moveSpeed; cameraMoved = true;}
-            if(window.movingBackward) { cameraOrigin.z += moveSpeed; cameraMoved = true; }
-            if(window.movingLeft) { cameraOrigin.x -= moveSpeed; cameraMoved = true; }
-            if(window.movingRight) { cameraOrigin.x += moveSpeed; cameraMoved = true; }
 
-            if(cameraMoved){
-                lowerLeftCorner.x = cameraOrigin.x - horizontal.x / 2 - vertical.x / 2;
-                lowerLeftCorner.y = cameraOrigin.y - horizontal.y / 2 - vertical.y / 2;
-                lowerLeftCorner.z = cameraOrigin.z - horizontal.z / 2 - vertical.z / 2 - focalLength;
-            }
+            // CAMERA CALCULATIONS HERE!!!!
+            double yawRad = Math.toRadians(window.camYaw);
+            double pitchRad = Math.toRadians(window.camPitch);
 
-            // This can be adapted to work for all the spheres in the scene
+            forward.x = Math.cos(yawRad) * Math.cos(pitchRad);
+            forward.y = Math.sin(pitchRad);
+            forward.z = Math.sin(yawRad) * Math.cos(pitchRad);
+            forward.Normalize();
+
+            forward.CrossProduct(worldUp, right).Normalize();
+            right.CrossProduct(forward, up).Normalize();
+
+            cameraOrigin.x = window.camX;
+            cameraOrigin.y = window.camY;
+            cameraOrigin.z = window.camZ;
+
+            horizontal.Copy(right).MultiplyInPlace(viewportWidth);
+            vertical.Copy(up).MultiplyInPlace(viewportHeight);
+            
+            // lowerLeftCorner = cameraOrigin + (forward * focalLength) - horizontal/2 - vertical/2
+            lowerLeftCorner.Copy(cameraOrigin);
+            tempVec.Copy(forward).MultiplyInPlace(focalLength);
+            lowerLeftCorner.AddInPlace(tempVec);
+            tempVec.Copy(horizontal).MultiplyInPlace(0.5);
+            lowerLeftCorner.SubtractInPlace(tempVec);
+            tempVec.Copy(vertical).MultiplyInPlace(0.5);
+            lowerLeftCorner.SubtractInPlace(tempVec);
+
+            // This can be adapted to work for all the spheres in the scene but I'll do it later
             interactiveSphere.center.x = window.targetX * 3.0;
             interactiveSphere.center.y = window.targetY * 3.0;
             interactiveSphere.center.z = window.targetZ - 6.0;
